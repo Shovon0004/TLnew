@@ -70,13 +70,13 @@ export default function Sidebar() {
             <div className="w-10 h-10 rounded-full bg-[#6FB3B8] flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0">
               {user.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                <img src={user.avatar} alt={user.name || "User"} className="w-full h-full object-cover" />
               ) : (
-                user.name.charAt(0).toUpperCase()
+                (user.name || "User").charAt(0).toUpperCase()
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white text-sm truncate">{user.name}</p>
+              <p className="font-semibold text-white text-sm truncate">{user.name || "User"}</p>
               <div className="flex items-center gap-1">
                 {user.role === "professional" ? (
                   <Briefcase className="w-3 h-3 text-blue-500" />

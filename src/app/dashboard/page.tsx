@@ -82,7 +82,7 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h1 className="text-3xl font-bold text-gray-900">
-                    Hello, {user?.name?.split(" ")[0]} 👋
+                    Hello, {user?.name?.split(" ")[0] || "User"} 👋
                   </h1>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
@@ -118,11 +118,11 @@ export default function DashboardPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={resolveAvatar(user.avatar)}
-                    alt={user.name}
+                    alt={user.name || "User"}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  user?.name?.charAt(0).toUpperCase()
+                  user?.name?.charAt(0).toUpperCase() || "U"
                 )}
               </div>
             </Link>

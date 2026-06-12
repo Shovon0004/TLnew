@@ -77,13 +77,13 @@ export default function LeaderboardPage() {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#6FB3B8] to-[#3D8F8F] flex items-center justify-center text-white font-bold text-lg shadow overflow-hidden">
                       {u.avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                        <img src={u.avatar} alt={u.name || "User"} className="w-full h-full object-cover" />
                       ) : (
-                        u.name.charAt(0).toUpperCase()
+                        (u.name || "User").charAt(0).toUpperCase()
                       )}
                     </div>
                     <p className="font-semibold text-gray-800 text-sm text-center truncate w-full text-center">
-                      {u.name.split(" ")[0]}
+                      {(u.name || "User").split(" ")[0]}
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <Star className="w-3 h-3 text-yellow-400" />
@@ -141,9 +141,9 @@ export default function LeaderboardPage() {
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6FB3B8] to-[#3D8F8F] flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0 overflow-hidden">
                     {u.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                      <img src={u.avatar} alt={u.name || "User"} className="w-full h-full object-cover" />
                     ) : (
-                      u.name.charAt(0).toUpperCase()
+                      (u.name || "User").charAt(0).toUpperCase()
                     )}
                   </div>
 
@@ -151,7 +151,7 @@ export default function LeaderboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900 truncate">
-                        {u.name}
+                        {u.name || "User"}
                         {isCurrentUser && (
                           <span className="ml-1 text-xs text-[#3D8F8F] font-normal">(you)</span>
                         )}
