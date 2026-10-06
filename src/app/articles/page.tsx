@@ -5,8 +5,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import SandyLoading from "@/components/SandyLoading";
 import api from "@/lib/api";
 import { BookOpen, Clock, Globe, Star } from "lucide-react";
-import Lottie from "lottie-react";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
 
 interface Article {
   _id: string;
@@ -41,14 +39,11 @@ export default function ArticlesPage() {
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <Lottie animationData={translateAnimation} loop className="w-14 h-14" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Articles</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Read articles and test your comprehension — earn XP for correct answers!
-            </p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Articles</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Read articles and test your comprehension — earn XP for correct answers!
+          </p>
         </div>
 
         {/* XP Info Banner */}

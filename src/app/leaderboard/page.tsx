@@ -7,16 +7,15 @@ import api from "@/lib/api";
 import { Trophy, Flame, Star, Briefcase } from "lucide-react";
 import Lottie from "lottie-react";
 import catAnimation from "../../../public/lotti/Cat playing animation.json";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
 
 interface LeaderboardUser {
   _id: string;
-  name: string;
-  avatar: string;
-  xp: number;
-  streak: number;
-  level: string;
-  role: string;
+  name?: string;
+  avatar?: string;
+  xp?: number;
+  streak?: number;
+  level?: string;
+  role?: string;
 }
 
 const medalColors = ["text-yellow-400", "text-gray-400", "text-amber-600"];
@@ -31,27 +30,40 @@ export default function LeaderboardPage() {
   const { user } = useAuth();
   const [leaders, setLeaders] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     api
       .get("/users/leaderboard")
-      .then((res) => setLeaders(res.data))
-      .catch(() => {})
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setLeaders(res.data);
+        } else if (res.data && Array.isArray((res.data as any).users)) {
+          setLeaders((res.data as any).users);
+        } else {
+          setLeaders([]);
+        }
+      })
+      .catch(() => {
+        setLeaders([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const currentUserRank = leaders.findIndex((l) => l._id === (user as any)?._id) + 1;
+  const currentUserId = (user as any)?._id || (user as any)?.id;
+  const currentUserRank =
+    Array.isArray(leaders) && currentUserId
+      ? leaders.findIndex((l) => l?._id === currentUserId) + 1
+      : 0;
 
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Lottie animationData={translateAnimation} loop className="w-14 h-14" />
-          <div className="flex items-center gap-3">
-            <Trophy className="w-7 h-7 text-yellow-500" />
-            <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
-          </div>
+        <div className="flex items-center gap-3 mb-8">
+          <Trophy className="w-7 h-7 text-yellow-500" />
+          <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
         </div>
 
         {/* Your rank banner */}
@@ -63,13 +75,18 @@ export default function LeaderboardPage() {
         )}
 
         {/* Top 3 podium */}
-        {!loading && leaders.length >= 3 && (
+        {!loading && Array.isArray(leaders) && leaders.length >= 3 && leaders[0] && leaders[1] && leaders[2] && (
           <div className="grid grid-cols-3 gap-3 mb-6">
             {[leaders[1], leaders[0], leaders[2]].map((u, podiumIdx) => {
+              if (!u) return null;
               const rank = podiumIdx === 0 ? 2 : podiumIdx === 1 ? 1 : 3;
               const height = rank === 1 ? "pt-0" : "pt-6";
+              const displayName = u.name?.trim() || "Learner";
+              const firstName = displayName.split(" ")[0] || displayName;
+              const initial = (displayName.charAt(0) || "L").toUpperCase();
+
               return (
-                <div key={u._id} className={`flex flex-col items-center ${height}`}>
+                <div key={u._id || `podium-${rank}`} className={`flex flex-col items-center ${height}`}>
                   <div
                     className={`w-full rounded-2xl border p-3 flex flex-col items-center gap-1 ${medalBg[rank - 1]}`}
                   >
@@ -77,17 +94,17 @@ export default function LeaderboardPage() {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#6FB3B8] to-[#3D8F8F] flex items-center justify-center text-white font-bold text-lg shadow overflow-hidden">
                       {u.avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={u.avatar} alt={u.name || "User"} className="w-full h-full object-cover" />
+                        <img src={u.avatar} alt={displayName} className="w-full h-full object-cover" />
                       ) : (
-                        (u.name || "User").charAt(0).toUpperCase()
+                        initial
                       )}
                     </div>
-                    <p className="font-semibold text-gray-800 text-sm text-center truncate w-full text-center">
-                      {(u.name || "User").split(" ")[0]}
+                    <p className="font-semibold text-gray-800 text-sm text-center truncate w-full">
+                      {firstName}
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
                       <Star className="w-3 h-3 text-yellow-400" />
-                      {u.xp} XP
+                      {u.xp ?? 0} XP
                     </p>
                   </div>
                 </div>
@@ -102,7 +119,7 @@ export default function LeaderboardPage() {
             <div className="flex justify-center py-6">
               <SandyLoading size={120} />
             </div>
-          ) : leaders.length === 0 ? (
+          ) : !Array.isArray(leaders) || leaders.length === 0 ? (
             <div className="p-10 text-center">
               <Trophy className="w-12 h-12 text-gray-200 mx-auto mb-3" />
               <p className="text-gray-400 font-medium">No data yet.</p>
@@ -110,10 +127,15 @@ export default function LeaderboardPage() {
             </div>
           ) : (
             leaders.map((u, idx) => {
-              const isCurrentUser = u._id === (user as any)?._id;
+              if (!u) return null;
+              const isCurrentUser = currentUserId && u._id === currentUserId;
+              const displayName = u.name?.trim() || "Learner";
+              const initial = (displayName.charAt(0) || "L").toUpperCase();
+              const level = u.level || "beginner";
+
               return (
                 <div
-                  key={u._id}
+                  key={u._id || `leader-${idx}`}
                   className={`flex items-center gap-4 px-5 py-4 transition-colors ${
                     isCurrentUser ? "bg-[#d0eaeb]/40" : "hover:bg-gray-50"
                   }`}
@@ -141,9 +163,9 @@ export default function LeaderboardPage() {
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6FB3B8] to-[#3D8F8F] flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0 overflow-hidden">
                     {u.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={u.avatar} alt={u.name || "User"} className="w-full h-full object-cover" />
+                      <img src={u.avatar} alt={displayName} className="w-full h-full object-cover" />
                     ) : (
-                      (u.name || "User").charAt(0).toUpperCase()
+                      initial
                     )}
                   </div>
 
@@ -151,17 +173,17 @@ export default function LeaderboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900 truncate">
-                        {u.name || "User"}
+                        {displayName}
                         {isCurrentUser && (
                           <span className="ml-1 text-xs text-[#3D8F8F] font-normal">(you)</span>
                         )}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-0.5 ${
-                          levelColors[u.level] || "bg-gray-100 text-gray-500"
+                          levelColors[level] || "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        {u.level}
+                        {level}
                       </span>
                       {u.role === "professional" && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 flex items-center gap-0.5">
@@ -173,7 +195,7 @@ export default function LeaderboardPage() {
 
                   {/* Stats */}
                   <div className="flex items-center gap-4 text-sm text-gray-500 flex-shrink-0">
-                    {u.streak > 0 && (
+                    {(u.streak ?? 0) > 0 && (
                       <span className="flex items-center gap-1">
                         <Flame className="w-4 h-4 text-orange-400" />
                         {u.streak}
@@ -181,7 +203,7 @@ export default function LeaderboardPage() {
                     )}
                     <span className="flex items-center gap-1 font-semibold text-gray-700">
                       <Star className="w-4 h-4 text-yellow-400" />
-                      {u.xp}
+                      {u.xp ?? 0}
                     </span>
                   </div>
                 </div>
@@ -191,9 +213,11 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Cat playing Lottie */}
-        <div className="flex justify-center mt-6">
-          <Lottie animationData={catAnimation} loop className="w-56 h-56" style={{ background: "transparent" }} />
-        </div>
+        {mounted && (
+          <div className="flex justify-center mt-6">
+            <Lottie animationData={catAnimation} loop className="w-56 h-56" style={{ background: "transparent" }} />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

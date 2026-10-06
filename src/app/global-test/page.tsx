@@ -29,8 +29,6 @@ import {
   Clock,
   HelpCircle,
 } from "lucide-react";
-import Lottie from "lottie-react";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface QuestionSource {
@@ -260,7 +258,7 @@ export default function GlobalTestPage() {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <Lottie animationData={translateAnimation} loop className="w-6 h-6" />
+                  <Languages className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-white/80 text-xs font-semibold uppercase tracking-widest">
                   Global Language Test

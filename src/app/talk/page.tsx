@@ -14,7 +14,6 @@ import Lottie from "lottie-react";
 import maleAnimation   from "../../../public/lotti/Talking Character.json";
 import femaleAnimation from "../../../public/lotti/talking girl.json";
 import micAnimation    from "../../../public/lotti/AI logo Foriday.json";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
 import * as vad from "@ricky0123/vad-web";
 import {
   MessageCircle, Mic, MicOff, Send, RotateCcw, Sparkles, User, Bot,
@@ -311,11 +310,11 @@ function TypewriterText({ text, speed = 6 }: { text: string; speed?: number }) {
 // minSpeechMs: discard utterances shorter than this (avoids cough/click false triggers)
 // preSpeechPadMs: ms of audio prepended before speech onset (avoids clipping first phoneme)
 // redemptionMs: grace period after silence before onSpeechEnd fires (handles brief pauses mid-sentence)
-const VAD_POSITIVE_THRESHOLD = 0.60;  // slightly lower → triggers on softer speech
-const VAD_NEGATIVE_THRESHOLD = 0.40;  // ~0.15-0.20 below positive
-const VAD_MIN_SPEECH_MS      = 150;   // ignore bursts < 150ms (was 250ms)
-const VAD_PRE_SPEECH_PAD_MS  = 150;   // 150ms pad before onset (was 300ms)
-const VAD_REDEMPTION_MS      = 180;   // 180ms grace → fires speculative 220ms earlier (was 400ms)
+const VAD_POSITIVE_THRESHOLD = 0.60;
+const VAD_NEGATIVE_THRESHOLD = 0.40;
+const VAD_MIN_SPEECH_MS      = 250;
+const VAD_PRE_SPEECH_PAD_MS  = 200;
+const VAD_REDEMPTION_MS      = 800; // 800ms grace period (prevents premature cutoffs)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main component
@@ -412,7 +411,8 @@ export default function TalkToAI() {
   const AUDIO_CACHE_MAX  = 80;
   // ── Speculative pre-fire refs ──────────────────────────────────────────────
   const finalTextRef      = useRef<string>("");           // mirrors Web Speech finalText
-  const liveSpeechTextRef = useRef<string>("");           // final + interim fallback for Chrome timing races
+  const liveSpeechTextRef   = useRef<string>("");
+  const useWebSpeechRef      = useRef<boolean>(true);           // final + interim fallback for Chrome timing races
   const speculativeRef    = useRef<{                      // in-flight speculative Gemini fetch
     text: string;
     fetchPromise: Promise<Response | null>;
@@ -569,12 +569,12 @@ export default function TalkToAI() {
     // will happen in the WS onmessage handler once all audio has played.
     if (!ttsWsRef.current) {
       setAiSpeaking(false);
-      if (handsFreeRef.current && !loadingRef.current) {
+      if (handsFreeRef.current && !loadingRef.current && !isStreamingRef.current) {
         setTimeout(() => {
-          if (handsFreeRef.current && !loadingRef.current) {
+          if (handsFreeRef.current && !loadingRef.current && !isStreamingRef.current) {
             window.dispatchEvent(new CustomEvent("hf-start-mic"));
           }
-        }, 40);
+        }, 300);
       }
     }
   }, []);
@@ -1164,9 +1164,19 @@ export default function TalkToAI() {
           window.dispatchEvent(new CustomEvent("vad-speech-resume"));
         },
         onSpeechEnd: (_audio: Float32Array) => {
+          const spoken = (finalTextRef.current || liveSpeechTextRef.current).trim();
+          // Do NOT stop if user hasn't spoken anything yet
+          if (!spoken && (!audioChunksRef.current || audioChunksRef.current.length === 0)) {
+            return;
+          }
           // Speech ended — pre-warm TTS WS + fire speculative Gemini, then stop
           window.dispatchEvent(new CustomEvent("vad-silence-early"));
-          setTimeout(() => stopListening(), 180);  // give Chrome time to emit final result
+          setTimeout(() => {
+            const hasSpoken = (finalTextRef.current || liveSpeechTextRef.current).trim();
+            if (hasSpoken) {
+              stopListening();
+            }
+          }, 400);
         },
         onFrameProcessed: (probs: { isSpeech: number }) => {
           // Speech probability (0-1) drives the waveform bars in real-time
@@ -1190,114 +1200,7 @@ export default function TalkToAI() {
   //
   // Fallback (Firefox / Safari):
   //   • MediaRecorder + VAD silence detection → backend Gemini STT (existing logic)
-  const startListening = useCallback(async () => {
-    if (micBlocked || isTranscribing) return;
-
-    if (loadingRef.current || isStreamingRef.current) {
-      cancelActiveTurn();
-    }
-
-    // Interrupt AI if it's speaking (user wants to take the floor)
-    stopSpeaking();
-
-    // ── Web Speech API path ────────────────────────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecAPI = (window as any).SpeechRecognition ||
-                         (window as any).webkitSpeechRecognition;
-    if (SpeechRecAPI) {
-      const rec = new SpeechRecAPI();
-      rec.continuous      = true;         // browser never auto-stops; VAD owns timing
-      rec.interimResults  = true;         // live words while speaking
-      rec.maxAlternatives = 1;
-      rec.lang = LANG_CODES[user?.currentLanguage || "English"] ?? "en-US";
-
-      let finalText = "";
-      let hasSent   = false; // guard against double-send from both VAD and onend
-
-      rec.onresult = (e: { resultIndex: number; results: SpeechRecognitionResultList }) => {
-        let interim = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-          else                      interim   += e.results[i][0].transcript;
-        }
-        finalTextRef.current = finalText; // keep ref in sync for speculative pre-fire
-        liveSpeechTextRef.current = `${finalText} ${interim}`.trim();
-        setInterimTranscript(finalText + interim);
-        // Early fire: if the last result is final and clearly ends a sentence,
-        // send immediately without waiting for the full 450ms silence timer.
-        if (finalText.trim() && /[.!?]$/.test(finalText.trim())
-            && e.results[e.results.length - 1]?.isFinal) {
-          speechSendRef.current?.();
-        }
-      };
-
-      // ── Called by VAD silence timer (via stopListening → speechSendRef) ──
-      // This fires the moment our 450ms silence elapses — before the browser
-      // would fire onend on its own, saving ~50–200ms of browser event delay.
-      const sendAndStop = () => {
-        if (hasSent) return;
-        hasSent = true;
-        speechSendRef.current = null;
-        speechRecRef.current  = null;
-        setIsListening(false);
-        setInterimTranscript("");
-        try { rec.stop(); } catch { /**/ } // tells browser to stop; will fire onend
-        const text = (finalText.trim() || liveSpeechTextRef.current.trim());
-        if (text) sendMessageText(text); // send immediately — pipeline starts NOW
-      };
-      speechSendRef.current = sendAndStop;
-
-      rec.onend = () => {
-        speechSendRef.current = null;
-        speechRecRef.current  = null;
-        setIsListening(false);
-        setInterimTranscript("");
-        // Fallback: send only if VAD never fired (e.g. no AudioContext support)
-        if (!hasSent) {
-          hasSent = true;
-          const text = (finalText.trim() || liveSpeechTextRef.current.trim());
-          if (text) sendMessageText(text);
-        }
-      };
-
-      rec.onerror = (e: { error: string }) => {
-        hasSent = true; // prevent accidental send after error
-        speechSendRef.current = null;
-        speechRecRef.current  = null;
-        liveSpeechTextRef.current = "";
-        setIsListening(false);
-        setInterimTranscript("");
-        if (e.error === "not-allowed" || e.error === "permission-denied") {
-          setMicBlocked(true); setShowTextInput(true);
-        }
-      };
-
-      speechRecRef.current = rec;
-      try {
-        finalTextRef.current = "";
-        liveSpeechTextRef.current = "";
-        rec.start();
-        setIsListening(true);
-        // Run VAD analyser in parallel for the waveform animation only
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        });
-        startVAD(stream);
-        rec.addEventListener("end", () => {
-          stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
-          stopVAD();
-        }, { once: true });
-      } catch (err: unknown) {
-        const e = err as { name?: string };
-        if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
-          setMicBlocked(true); setShowTextInput(true);
-        }
-        speechRecRef.current = null; setIsListening(false);
-      }
-      return; // ← skip MediaRecorder fallback
-    }
-
-    // ── Fallback: MediaRecorder + Gemini STT (Firefox / Safari) ────────────
+    const startMediaRecorder = useCallback(async () => {
     try {
       const token = Cookies.get("token");
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
@@ -1446,11 +1349,136 @@ export default function TalkToAI() {
         setMicBlocked(true); setShowTextInput(true);
       }
     }
-  }, [micBlocked, isTranscribing, stopVAD, startVAD, sendMessageText, user?.currentLanguage, stopSpeaking, cancelActiveTurn]);
+  }, [stopVAD, startVAD, sendMessageText, user?.currentLanguage]);
+
+  // ── Start Recording (Web Speech API → seamless fallback to MediaRecorder) ──
+  const startListening = useCallback(async () => {
+    if (micBlocked || isTranscribing) return;
+
+    if (loadingRef.current || isStreamingRef.current) {
+      cancelActiveTurn();
+    }
+
+    // Interrupt AI if it is speaking
+    stopSpeaking();
+
+    // ── Web Speech API path (Chrome / Edge) ──
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    const SpeechRecAPI = useWebSpeechRef.current ? (win.SpeechRecognition || win.webkitSpeechRecognition) : null;
+    if (SpeechRecAPI) {
+      const rec = new SpeechRecAPI();
+      rec.continuous      = true;
+      rec.interimResults  = true;
+      rec.maxAlternatives = 1;
+      rec.lang = LANG_CODES[user?.currentLanguage || "English"] ?? "en-US";
+
+      let finalText = "";
+      let hasSent   = false;
+      let silenceTimer: NodeJS.Timeout | null = null;
+
+      const sendAndStop = () => {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (hasSent) return;
+        hasSent = true;
+        speechSendRef.current = null;
+        speechRecRef.current  = null;
+        setIsListening(false);
+        setInterimTranscript("");
+        try { rec.stop(); } catch { /**/ }
+        const text = (finalText.trim() || liveSpeechTextRef.current.trim());
+        if (text) sendMessageText(text);
+      };
+      speechSendRef.current = sendAndStop;
+
+      rec.onresult = (e: { resultIndex: number; results: SpeechRecognitionResultList }) => {
+        let finalAccum = "";
+        let interimAccum = "";
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finalAccum += e.results[i][0].transcript + " ";
+          else interimAccum += e.results[i][0].transcript;
+        }
+        finalText = finalAccum.trim();
+        finalTextRef.current = finalText;
+        const currentFull = `${finalText} ${interimAccum}`.trim();
+        liveSpeechTextRef.current = currentFull;
+        setInterimTranscript(currentFull);
+
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (currentFull.length > 0) {
+          silenceTimer = setTimeout(() => {
+            sendAndStop();
+          }, 1200);
+        }
+      };
+
+      rec.onend = () => {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        speechSendRef.current = null;
+        speechRecRef.current  = null;
+        setIsListening(false);
+        setInterimTranscript("");
+        if (!hasSent) {
+          hasSent = true;
+          const text = (finalText.trim() || liveSpeechTextRef.current.trim());
+          if (text) sendMessageText(text);
+        }
+      };
+
+      rec.onerror = (e: { error: string }) => {
+        if (e.error === "no-speech" || e.error === "aborted") {
+          return;
+        }
+        // Brave / Firefox / blocked speech service: transparently fall back to MediaRecorder
+        if (e.error === "network" || e.error === "service-not-allowed" || e.error === "audio-capture" || e.error === "not-allowed") {
+          useWebSpeechRef.current = false;
+          speechSendRef.current = null;
+          speechRecRef.current  = null;
+          try { rec.stop(); } catch { /**/ }
+          startMediaRecorder();
+          return;
+        }
+        hasSent = true;
+        speechSendRef.current = null;
+        speechRecRef.current  = null;
+        liveSpeechTextRef.current = "";
+        setIsListening(false);
+        setInterimTranscript("");
+      };
+
+      speechRecRef.current = rec;
+      try {
+        finalTextRef.current = "";
+        liveSpeechTextRef.current = "";
+        rec.start();
+        setIsListening(true);
+        navigator.mediaDevices?.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        }).then((stream) => {
+          startVAD(stream);
+          rec.addEventListener("end", () => {
+            stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+            stopVAD();
+          }, { once: true });
+        }).catch(() => {});
+        return;
+      } catch {
+        useWebSpeechRef.current = false;
+        speechRecRef.current = null;
+      }
+    }
+
+    // Fallback: MediaRecorder + Gemini STT (Brave, Firefox, Safari)
+    await startMediaRecorder();
+  }, [micBlocked, isTranscribing, user?.currentLanguage, stopSpeaking, cancelActiveTurn, sendMessageText, startVAD, stopVAD, startMediaRecorder]);
 
   // ── Hands-Free event bridge ────────────────────────────────────────────────
   useEffect(() => {
-    const handler = () => { if (!loadingRef.current) startListening(); };
+    const handler = () => {
+      if (!loadingRef.current && !isStreamingRef.current) {
+        startListening();
+      }
+    };
     window.addEventListener("hf-start-mic", handler);
     return () => window.removeEventListener("hf-start-mic", handler);
   }, [startListening]);
@@ -1782,14 +1810,11 @@ export default function TalkToAI() {
 
           {/* ── Header ─────────────────────────────────────────────────────── */}
           <div className="mb-6 flex items-center justify-between">
-            <div className="flex gap-4 items-center">
-              <Lottie animationData={translateAnimation} loop className="w-16 h-16" />
-              <div>
-                <h1 className="text-3xl font-bold text-[#06555A] flex items-center gap-2">
-                  <MessageCircle className="w-8 h-8" /> Talk to AI
-                </h1>
-                <p className="text-gray-500 mt-1">Practice conversations with your AI language partner</p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-[#06555A] flex items-center gap-2">
+                <MessageCircle className="w-8 h-8" /> Talk to AI
+              </h1>
+              <p className="text-gray-500 mt-1">Practice conversations with your AI language partner</p>
             </div>
             {stage === "chat" && (
               <button onClick={resetConversation}

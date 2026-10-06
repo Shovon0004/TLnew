@@ -36,11 +36,6 @@ function loadRazorpayScript(): Promise<boolean> {
 interface XpPackage   { id: string; coins: number; xp: number }
 interface CoinPackage { id: string; coins: number; priceINR: number }
 
-import dynamic from "next/dynamic";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
-
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
-
 /* ── XP-package display meta ───────────────────────────────────────────────── */
 const XP_META: Record<string, { label: string; description: string; badge?: string; color: string; iconBg: string }> = {
   small:  { label: "Starter Boost",   description: "Quick XP injection",            color: "from-sky-400 to-cyan-500",     iconBg: "bg-sky-100 text-sky-600" },
@@ -191,12 +186,9 @@ export default function ShopPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Lottie animationData={translateAnimation} loop className="w-14 h-14" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Shop</h1>
-            <p className="text-gray-500">Buy coins with real money, then spend coins to boost your XP.</p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Shop</h1>
+          <p className="text-gray-500">Buy coins with real money, then spend coins to boost your XP.</p>
         </div>
 
         {/* Balance strip */}

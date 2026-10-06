@@ -12,16 +12,10 @@ import {
   Coins,
   Star,
   ArrowRight,
-  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import dynamic from "next/dynamic";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
-
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 const LANGUAGES = [
   { code: "en", label: "English", flag: "🇬🇧" },
@@ -54,8 +48,7 @@ function resolveAvatar(url: string | undefined) {
 }
 
 export default function SettingsPage() {
-  const { user, updateUser, logout } = useAuth();
-  const router = useRouter();
+  const { user, updateUser } = useAuth();
   const [nativeLanguage, setNativeLanguage] = useState(user?.nativeLanguage || "");
   const [currentLanguage, setCurrentLanguage] = useState(user?.currentLanguage || "");
   const [saved, setSaved] = useState(false);
@@ -66,11 +59,6 @@ export default function SettingsPage() {
   const [uploadError, setUploadError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
 
   const handleSave = async () => {
     if (nativeLanguage === currentLanguage) {
@@ -153,16 +141,13 @@ export default function SettingsPage() {
       <div className="max-w-2xl mx-auto px-4 py-6">
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Lottie animationData={translateAnimation} loop className="w-14 h-14" />
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#d0eaeb]">
-              <Settings className="w-6 h-6 text-[#06555A]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 leading-none">Settings</h1>
-              <p className="text-sm text-gray-400 mt-0.5">Manage your profile &amp; preferences</p>
-            </div>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2 rounded-xl bg-[#d0eaeb]">
+            <Settings className="w-6 h-6 text-[#06555A]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-gray-900 leading-none">Settings</h1>
+            <p className="text-sm text-gray-400 mt-0.5">Manage your profile &amp; preferences</p>
           </div>
         </div>
 
@@ -384,24 +369,6 @@ export default function SettingsPage() {
                   ? <><CheckCircle2 className="w-4 h-4" /> Saved!</>
                   : "Save Changes"
                 }
-              </button>
-            </div>
-          </section>
-
-          {/* ── Logout — mobile only ────────────────────── */}
-          <section className="md:hidden bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-red-50 to-transparent px-6 py-4 flex items-center gap-2 border-b border-red-100">
-              <LogOut className="w-4 h-4 text-red-500" />
-              <span className="font-bold text-gray-800 text-sm uppercase tracking-wide">Account</span>
-            </div>
-            <div className="px-6 py-5">
-              <p className="text-sm text-gray-500 mb-4">Sign out of your account on this device.</p>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-bold px-5 py-3 rounded-xl text-sm transition-all shadow-sm hover:shadow"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
               </button>
             </div>
           </section>

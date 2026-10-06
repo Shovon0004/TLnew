@@ -4,8 +4,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import Link from "next/link";
-import Lottie from "lottie-react";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
 import {
   Flame,
   Star,
@@ -18,6 +16,8 @@ import {
   GraduationCap,
   Briefcase,
   Coins,
+  MessageCircle,
+  Sparkles,
 } from "lucide-react";
 
 interface UserStats {
@@ -30,19 +30,12 @@ interface UserStats {
   level: string;
 }
 
-const LANGUAGES = ["English", "Spanish", "French", "German", "Japanese", "Mandarin", "Portuguese"];
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
-function resolveAvatar(url: string | undefined) {
-  if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("data:")) return url;
-  return `${API_BASE}${url}`;
-}
+const LANGUAGES = ["English", "Spanish", "French", "German", "Japanese", "Mandarin", "Portuguese", "Hindi"];
 
 const levelColors: Record<string, string> = {
-  beginner: "bg-[#d0eaeb] text-[#3D8F8F]",
-  intermediate: "bg-yellow-100 text-yellow-700",
-  advanced: "bg-purple-100 text-purple-700",
+  beginner: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  intermediate: "bg-amber-100 text-amber-800 border-amber-200",
+  advanced: "bg-purple-100 text-purple-800 border-purple-200",
 };
 
 export default function DashboardPage() {
@@ -52,7 +45,6 @@ export default function DashboardPage() {
   useEffect(() => {
     api.get("/users/me").then((res) => {
       setStats(res.data);
-      // Keep auth context (and sidebar) in sync with latest XP, streak & coins
       updateUser({ xp: res.data.xp, streak: res.data.streak, coins: res.data.coins });
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,7 +54,6 @@ export default function DashboardPage() {
   const xp = stats?.xp || user?.xp || 0;
   const coins = stats?.coins ?? user?.coins ?? 0;
   const streak = stats?.streak || user?.streak || 0;
-  // Derive the most-recently-studied language from completed lessons (most accurate)
   const lastCompletedLanguage =
     stats?.completedLessons && stats.completedLessons.length > 0
       ? stats.completedLessons[stats.completedLessons.length - 1].language
@@ -73,198 +64,160 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex gap-4 items-center">
-              <Lottie animationData={translateAnimation} loop className="w-16 h-16" />
-              <div>
-                <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    Hello, {user?.name?.split(" ")[0] || "User"} 👋
-                  </h1>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                      user?.role === "professional"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-[#d0eaeb] text-[#3D8F8F]"
-                    }`}
-                  >
-                    {user?.role === "professional" ? (
-                      <Briefcase className="w-3 h-3" />
-                    ) : (
-                      <GraduationCap className="w-3 h-3" />
-                    )}
-                    {user?.role}
-                  </span>
-                </div>
-                <p className="text-gray-500">
-                  {streak > 0
-                    ? `You're on a ${streak}-day streak! Keep it going 🔥`
-                    : "Start a lesson to build your streak!"}
-                </p>
-              </div>
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Top Welcome Banner */}
+        <div className="glass-card-dark rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-white/20">
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-bold text-teal-300 mb-3 border border-white/10">
+              <Sparkles className="w-3.5 h-3.5 text-teal-300 animate-pulse" />
+              <span>TransLang Workspace Active</span>
             </div>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+              Welcome back, {user?.name?.split(" ")[0]}!
+            </h1>
+            <p className="text-slate-300 text-sm mt-1.5 max-w-lg">
+              {streak > 0
+                ? `You are on a ${streak}-day continuous streak! Keep the momentum going today.`
+                : "Complete your daily conversation practice to ignite your streak."}
+            </p>
+          </div>
 
-            {/* Profile avatar — mobile only, taps to go to Settings */}
+          <div className="relative z-10 flex items-center gap-3">
             <Link
-              href="/settings"
-              className="md:hidden flex-shrink-0 mt-1"
-              aria-label="Go to settings"
+              href="/talk"
+              className="bg-white hover:bg-teal-50 text-slate-950 text-xs sm:text-sm font-extrabold px-6 py-3.5 rounded-full shadow-2xl hover:scale-105 transition-all flex items-center gap-2"
             >
-              <div className="w-12 h-12 rounded-full bg-[#6FB3B8] flex items-center justify-center text-white font-bold text-base overflow-hidden border-2 border-[#3D8F8F]/40 shadow-md active:scale-95 transition-transform">
-                {user?.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={resolveAvatar(user.avatar)}
-                    alt={user.name || "User"}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  user?.name?.charAt(0).toUpperCase() || "U"
-                )}
-              </div>
+              <MessageCircle className="w-4 h-4 text-slate-950" />
+              <span>Start AI Talk</span>
             </Link>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           {[
             {
               label: "Day Streak",
               value: streak,
               icon: Flame,
-              color: "from-orange-400 to-red-400",
-              bg: "bg-orange-50",
+              color: "text-orange-500",
+              badge: "bg-orange-500/10 text-orange-600",
             },
             {
               label: "Total XP",
               value: xp,
               icon: Star,
-              color: "from-yellow-400 to-amber-400",
-              bg: "bg-yellow-50",
+              color: "text-yellow-500",
+              badge: "bg-yellow-500/10 text-yellow-600",
             },
             {
-              label: "Coins",
+              label: "Fluency Coins",
               value: coins,
               icon: Coins,
-              color: "from-amber-400 to-yellow-500",
-              bg: "bg-amber-50",
+              color: "text-amber-500",
+              badge: "bg-amber-500/10 text-amber-600",
             },
             {
-              label: "Lessons Done",
+              label: "Units Done",
               value: completedCount,
               icon: CheckCircle2,
-              color: "from-[#6FB3B8] to-[#3D8F8F]",
-              bg: "bg-[#d0eaeb]",
+              color: "text-teal-500",
+              badge: "bg-teal-500/10 text-teal-600",
             },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className={`${bg} rounded-2xl p-5 border border-white shadow-sm`}>
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3 shadow`}>
-                <Icon className="w-5 h-5 text-white" />
+          ].map(({ label, value, icon: Icon, color, badge }) => (
+            <div key={label} className="glass-card-light rounded-3xl p-5 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-slate-500">{label}</span>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${badge}`}>
+                  <Icon className={`w-4 h-4 ${color}`} />
+                </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{value}</p>
-              <p className="text-sm text-gray-500 font-medium mt-0.5">{label}</p>
+              <p className="text-3xl font-extrabold text-slate-950">{value}</p>
             </div>
           ))}
         </div>
 
-        {/* XP Progress */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
+        {/* Level Progression */}
+        <div className="glass-card-light rounded-3xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#3D8F8F]" />
-              <span className="font-semibold text-gray-800">Level Progress</span>
+              <TrendingUp className="w-4 h-4 text-teal-600" />
+              <span className="font-extrabold text-sm text-slate-900">Fluency Milestone</span>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${levelColors[stats?.level || "beginner"]}`}>
-              {stats?.level || "beginner"}
+            <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize border ${levelColors[stats?.level || "beginner"] || "bg-slate-100 text-slate-700"}`}>
+              {stats?.level || "beginner"} Level
             </span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-3">
+          <div className="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-200">
             <div
-              className="bg-gradient-to-r from-[#6FB3B8] to-[#3D8F8F] h-3 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-teal-400 to-sky-500 h-full rounded-full transition-all duration-500 shadow-sm"
               style={{ width: `${xpProgress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            {xp % xpToNextLevel} / {xpToNextLevel} XP to next level
+          <p className="text-[11px] text-slate-500 mt-2.5 font-semibold">
+            {xp % xpToNextLevel} / {xpToNextLevel} XP towards next level
           </p>
         </div>
 
-        {/* Currently Learning */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Globe className="w-5 h-5 text-[#3D8F8F]" />
-              <h2 className="font-bold text-gray-800">Continue Learning</h2>
-            </div>
-            {currentLanguage ? (
-              <div className="flex items-center justify-between p-4 bg-[#d0eaeb] rounded-xl border border-[#6FB3B8]/30">
-                <div>
-                  <p className="font-semibold text-gray-800">{currentLanguage}</p>
-                  <p className="text-sm text-gray-500">{completedCount} lessons completed</p>
+        {/* Learning Paths */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Active Course */}
+          <div className="glass-card-light rounded-3xl shadow-lg p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Globe className="w-4 h-4 text-teal-600" />
+                <h2 className="font-extrabold text-sm text-slate-900">Current Target Language</h2>
+              </div>
+              {currentLanguage ? (
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between shadow-sm">
+                  <div>
+                    <h3 className="font-extrabold text-lg text-slate-950">{currentLanguage}</h3>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">{completedCount} units mastered</p>
+                  </div>
+                  <Link
+                    href="/lessons"
+                    className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow transition flex items-center gap-1.5"
+                  >
+                    <span>Continue</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-                <Link
-                  href="/lessons"
-                  className="flex items-center gap-1 text-sm font-bold text-[#3D8F8F] hover:text-[#06555A]"
-                >
-                  Continue <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No language selected yet</p>
-                <Link
-                  href="/lessons"
-                  className="mt-3 inline-block text-sm font-bold text-[#3D8F8F] hover:underline"
-                >
-                  Browse Lessons →
-                </Link>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-6">
+                  <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-500 text-xs font-semibold">No language selected yet</p>
+                  <Link
+                    href="/lessons"
+                    className="mt-3 inline-block text-xs font-bold text-teal-600 hover:underline"
+                  >
+                    Choose Language &rarr;
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Pick a Language */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          {/* Available Languages */}
+          <div className="glass-card-light rounded-3xl shadow-lg p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              <h2 className="font-bold text-gray-800">Available Languages</h2>
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h2 className="font-extrabold text-sm text-slate-900">Explore Languages</h2>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {LANGUAGES.map((lang) => (
                 <Link
                   key={lang}
                   href={`/lessons?language=${lang}`}
-                  className="p-3 rounded-xl border border-gray-100 hover:border-[#6FB3B8] hover:bg-[#d0eaeb] transition text-sm font-medium text-gray-700 flex items-center gap-2"
+                  className="p-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all text-xs font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
                 >
-                  <Globe className="w-4 h-4 text-gray-300" />
-                  {lang}
+                  <span>{lang}</span>
                 </Link>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Recent Activity */}
-        {stats?.completedLessons && stats.completedLessons.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="font-bold text-gray-800 mb-4">Recent Lessons</h2>
-            <div className="space-y-3">
-              {stats.completedLessons.slice(-5).reverse().map((lesson, index) => (
-                <div key={`${lesson._id}-${index}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50">
-                  <CheckCircle2 className="w-5 h-5 text-[#3D8F8F] flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{lesson.title}</p>
-                    <p className="text-xs text-gray-400">{lesson.language}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

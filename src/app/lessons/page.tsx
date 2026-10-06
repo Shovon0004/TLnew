@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import {
   BookOpen,
   CheckCircle2,
+  Check,
   Lock,
   Star,
   ChevronRight,
@@ -22,12 +23,40 @@ import {
   RotateCcw,
   Mic,
   StopCircle,
+  Sparkles,
+  LayoutGrid,
+  Milestone,
 } from "lucide-react";
 import Lottie from "lottie-react";
 import deliveryAnimation from "../../../public/lotti/Delivery.json";
 import treeAnimation from "../../../public/lotti/Tree Lottie animation.json";
-import translateAnimation from "../../../public/lotti/Ai Translation.json";
-import LearningPathStairs from "@/components/LearningPathStairs";
+
+function ClimberAvatar({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 60 90" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Head */}
+      <circle cx="30" cy="18" r="9" fill="#2563EB" />
+      {/* Hair */}
+      <path d="M22 14C23 8 37 8 38 14C39 18 36 21 30 21C24 21 21 18 22 14Z" fill="#FBBF24" />
+      {/* Face glow */}
+      <circle cx="30" cy="18" r="7" fill="#60A5FA" opacity="0.4" />
+      {/* Arms reaching to ladder rails */}
+      <path d="M22 30L8 16" stroke="#FBBF24" strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M38 30L52 16" stroke="#FBBF24" strokeWidth="4.5" strokeLinecap="round" />
+      {/* Backpack */}
+      <rect x="23" y="27" width="14" height="18" rx="4" fill="#CBD5E1" />
+      <rect x="25" y="29" width="10" height="14" rx="2" fill="#3B82F6" />
+      {/* Body / Shirt */}
+      <rect x="22" y="26" width="16" height="20" rx="4" fill="#FFFFFF" />
+      {/* Legs */}
+      <path d="M25 46L17 68" stroke="#A855F7" strokeWidth="5.5" strokeLinecap="round" />
+      <path d="M35 46L43 66" stroke="#A855F7" strokeWidth="5.5" strokeLinecap="round" />
+      {/* Shoes */}
+      <circle cx="16" cy="70" r="4.5" fill="#EC4899" />
+      <circle cx="44" cy="68" r="4.5" fill="#EC4899" />
+    </svg>
+  );
+}
 
 interface LessonContent {
   _id?: string;
@@ -572,6 +601,7 @@ function LessonsContent() {
   const [score, setScore] = useState(0);
   const [speakScore, setSpeakScore] = useState(0);
   const [listTab, setListTab] = useState<"lessons" | "speaking">("lessons");
+  const [viewMode, setViewMode] = useState<"path" | "grid">("path");
 
   useEffect(() => {
     const fetchLessons = async () => {
@@ -791,18 +821,14 @@ function LessonsContent() {
                   : score === mainContent.length ? "Perfect score! 🎉" : score >= mainContent.length / 2 ? "Great job! Keep practising." : "Keep going — practice makes perfect!"}
               </p>
               <div className="flex items-center justify-center gap-4 mb-8">
-                {listTab !== "speaking" && (
-                  <>
-                    <div className="flex items-center gap-2 text-yellow-600 font-bold text-lg">
-                      <Star className="w-6 h-6 text-yellow-500" />
-                      +{activeLesson.xpReward} XP earned
-                    </div>
-                    <div className="flex items-center gap-2 text-amber-600 font-bold text-lg">
-                      <span className="text-xl">🪙</span>
-                      +{Math.max(5, Math.ceil(activeLesson.xpReward / 10))} coins
-                    </div>
-                  </>
-                )}
+                <div className="flex items-center gap-2 text-yellow-600 font-bold text-lg">
+                  <Star className="w-6 h-6 text-yellow-500" />
+                  +{activeLesson.xpReward} XP earned
+                </div>
+                <div className="flex items-center gap-2 text-amber-600 font-bold text-lg">
+                  <span className="text-xl">🪙</span>
+                  +{Math.max(5, Math.ceil(activeLesson.xpReward / 10))} coins
+                </div>
               </div>
               <div className="flex gap-3 justify-center flex-wrap">
                 <button
@@ -833,62 +859,103 @@ function LessonsContent() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6 flex items-center gap-4">
-          <Lottie animationData={translateAnimation} loop className="w-16 h-16" />
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Header with Title and Mode Switchers */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Lessons</h1>
-            <p className="text-gray-500">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/80 backdrop-blur-md text-[#7c3aed] border border-white shadow-sm flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#7c3aed]" />
+                Fluency Journey
+              </span>
+              <span className="text-xs font-bold text-white drop-shadow">
+                {completedIds.length}/{lessons.length} Lessons Cleared
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
+              Learning Roadmap
+            </h1>
+            <p className="text-slate-100/90 text-sm font-medium mt-1 drop-shadow">
               {user?.role === "professional"
-                ? "Professional language courses tailored for business"
-                : "Learn at your own pace, one lesson at a time"}
+                ? "Ascend your business fluency track one level at a time"
+                : "Climb the ladder to natural language mastery"}
             </p>
+          </div>
+
+          {/* View Mode & Mode Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Standard / Speaking toggle */}
+            <div className="flex items-center gap-1 p-1 bg-white/80 backdrop-blur-xl rounded-2xl border border-white shadow-sm">
+              <button
+                onClick={() => setListTab("lessons")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs transition ${
+                  listTab === "lessons"
+                    ? "bg-[#06555A] text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Lessons</span>
+              </button>
+              <button
+                onClick={() => setListTab("speaking")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs transition ${
+                  listTab === "speaking"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Mic className="w-3.5 h-3.5" />
+                <span>Speak</span>
+              </button>
+            </div>
+
+            {/* Path / Grid View Switch */}
+            <div className="flex items-center gap-1 p-1 bg-white/80 backdrop-blur-xl rounded-2xl border border-white shadow-sm">
+              <button
+                onClick={() => setViewMode("path")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition ${
+                  viewMode === "path"
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="Pathway Ladder View"
+              >
+                <Milestone className="w-3.5 h-3.5" />
+                <span>Path</span>
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition ${
+                  viewMode === "grid"
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Grid</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Top-level tabs */}
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={() => setListTab("lessons")}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition border-2 ${
-              listTab === "lessons"
-                ? "bg-[#3D8F8F] text-white border-[#3D8F8F] shadow-md shadow-[#6FB3B8]/30"
-                : "bg-white text-gray-500 border-gray-200 hover:border-[#6FB3B8]"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            Lessons
-          </button>
-          <button
-            onClick={() => setListTab("speaking")}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition border-2 ${
-              listTab === "speaking"
-                ? "bg-green-500 text-white border-green-500 shadow-md shadow-green-200"
-                : "bg-white text-gray-500 border-gray-200 hover:border-green-400"
-            }`}
-          >
-            <Mic className="w-4 h-4" />
-            Speak Practice
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-600">
-              <Filter className="w-4 h-4" />
-              Filter:
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5 font-medium">Language</p>
-              <div className="flex gap-2 flex-wrap">
+        {/* Filter HUD */}
+        <div className="bg-white/85 backdrop-blur-2xl rounded-3xl border border-white shadow-lg p-4 text-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                <Globe className="w-3.5 h-3.5 text-[#06555A]" /> Language:
+              </span>
+              <div className="flex gap-1.5 flex-wrap">
                 {LANGUAGES.map((lang) => (
                   <button
                     key={lang}
                     onClick={() => setSelectedLanguage(lang)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                       selectedLanguage === lang
-                        ? "bg-[#3D8F8F] text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        ? "bg-[#06555A] text-white shadow-sm"
+                        : "bg-white/70 text-slate-700 hover:bg-white border border-slate-200/60"
                     }`}
                   >
                     {lang}
@@ -896,17 +963,20 @@ function LessonsContent() {
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5 font-medium">Level</p>
-              <div className="flex gap-2 flex-wrap">
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-purple-600" /> Level:
+              </span>
+              <div className="flex gap-1.5 flex-wrap">
                 {LEVELS.map((level) => (
                   <button
                     key={level}
                     onClick={() => setSelectedLevel(level)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
                       selectedLevel === level
-                        ? "bg-[#3D8F8F] text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : "bg-white/70 text-slate-700 hover:bg-white border border-slate-200/60"
                     }`}
                   >
                     {level}
@@ -920,8 +990,8 @@ function LessonsContent() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
             <Lottie animationData={treeAnimation} loop className="w-24 h-24 mb-4" style={{ background: "transparent" }} />
-            <div className="w-10 h-10 border-4 border-[#3D8F8F] border-t-transparent rounded-full animate-spin" />
-            <span className="mt-2 text-gray-400 text-sm">Loading lessons...</span>
+            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <span className="mt-3 text-white font-bold text-sm tracking-wider drop-shadow">Loading Roadmap...</span>
           </div>
         ) : (() => {
           const filtered = lessons.filter((l) =>
@@ -929,44 +999,289 @@ function LessonsContent() {
               ? l.content.some((c) => c.type === "speaking")
               : l.content.some((c) => c.type !== "speaking")
           );
+
           if (filtered.length === 0) return (
-            <div className="text-center py-20 animate-fade-in">
+            <div className="text-center py-20 bg-white/80 backdrop-blur-2xl rounded-3xl border border-white p-8 shadow-xl">
               <Lottie animationData={deliveryAnimation} loop className="w-32 h-32 mx-auto mb-4" style={{ background: "transparent" }} />
-              <h3 className="text-lg font-semibold text-gray-400">
-                {listTab === "speaking" ? "No speak practice lessons yet" : "No lessons found"}
+              <h3 className="text-xl font-bold text-slate-800">
+                {listTab === "speaking" ? "No Voice Lessons Found" : "No Lessons Found"}
               </h3>
-              <p className="text-gray-400 text-sm mt-1">Try changing the filters above</p>
+              <p className="text-slate-500 text-sm mt-1">Try selecting a different language or level filter</p>
             </div>
           );
-          const firstUncompletedIndex = filtered.findIndex((l) => !completedIds.includes(l._id));
 
-          const steps = filtered.map((lesson, idx) => {
-            let status: "completed" | "current" | "locked" = "locked";
-            if (completedIds.includes(lesson._id)) {
-              status = "completed";
-            } else if (idx === firstUncompletedIndex) {
-              status = "current";
-            }
+          const activeIndex = filtered.findIndex((l) => !completedIds.includes(l._id));
+          const currentActiveId = activeIndex !== -1 ? filtered[activeIndex]._id : filtered[0]?._id;
 
-            return {
-              id: lesson._id,
-              title: lesson.title,
-              description: lesson.description || `${lesson.language} • ${lesson.xpReward} XP`,
-              status,
-              data: lesson
-            };
-          });
+          /* PATHWAY LADDER VIEW (PIXEL-PERFECT ALIGNMENT) */
+          if (viewMode === "path") {
+            return (
+              <div className="relative py-8 px-2 max-w-4xl mx-auto">
+                {/* Continuous Center Ladder Rails */}
+                <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 flex justify-between px-2.5 sm:px-3 pointer-events-none z-0">
+                  <div className="w-3 sm:w-3.5 h-full bg-gradient-to-b from-[#d8b4fe] via-[#c4b5fd] to-[#a78bfa] rounded-full shadow-[0_0_12px_rgba(196,181,253,0.7)] border border-white/60" />
+                  <div className="w-3 sm:w-3.5 h-full bg-gradient-to-b from-[#d8b4fe] via-[#c4b5fd] to-[#a78bfa] rounded-full shadow-[0_0_12px_rgba(196,181,253,0.7)] border border-white/60" />
+                </div>
 
+                {/* Rows of nodes in 3-column grid */}
+                <div className="space-y-12 sm:space-y-16 relative z-10">
+                  {filtered.map((lesson, idx) => {
+                    const isCompleted = completedIds.includes(lesson._id);
+                    const isActive = lesson._id === currentActiveId && !isCompleted;
+                    const isLocked = !isCompleted && !isActive;
+                    const isLeft = idx % 2 === 0;
+
+                    return (
+                      <div
+                        key={lesson._id}
+                        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 relative"
+                        style={{ animation: `fadeInUp 0.4s ease ${(idx * 0.06).toFixed(2)}s both` }}
+                      >
+                        {/* LEFT COLUMN: Card or Empty */}
+                        <div className="flex items-center justify-end">
+                          {isLeft ? (
+                            <div className="flex items-center justify-end w-full max-w-sm">
+                              {/* Floating Card */}
+                              <div
+                                onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                                className={`w-full rounded-3xl p-5 sm:p-6 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 cursor-pointer select-none z-20 ${
+                                  isActive
+                                    ? "bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#9333ea] text-white shadow-[0_20px_45px_rgba(124,58,237,0.4)] border-2 border-white/40 ring-4 ring-purple-400/20"
+                                    : isCompleted
+                                    ? "bg-white/95 backdrop-blur-2xl text-slate-900 shadow-[0_12px_32px_rgba(0,0,0,0.06)] border border-white hover:shadow-xl"
+                                    : "bg-white/80 backdrop-blur-md text-slate-800 shadow-md border border-white/70 hover:bg-white/95 hover:shadow-lg opacity-90"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-1.5">
+                                  <h3 className={`text-base sm:text-lg font-black tracking-tight ${isActive ? "text-white drop-shadow" : "text-slate-900"}`}>
+                                    {lesson.title}
+                                  </h3>
+                                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shrink-0 ${
+                                    isActive ? "bg-white/20 text-white border-white/30" : isCompleted ? "bg-lime-50 text-lime-700 border-lime-200" : "bg-slate-100 text-slate-600 border-slate-200"
+                                  }`}>
+                                    {lesson.level}
+                                  </span>
+                                </div>
+
+                                <p className={`text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3.5 ${isActive ? "text-purple-100" : "text-slate-600"}`}>
+                                  {lesson.description}
+                                </p>
+
+                                <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/10">
+                                  <div className="flex items-center gap-1.5 sm:gap-2">
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                                      <Globe className="w-3 h-3" />
+                                      {lesson.language}
+                                    </span>
+                                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg flex items-center gap-1 ${isActive ? "bg-amber-400 text-slate-950 shadow-sm" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                                      <Zap className="w-3 h-3 fill-current" />
+                                      +{lesson.xpReward} XP
+                                    </span>
+                                  </div>
+
+                                  <span className={`text-xs font-extrabold uppercase tracking-wider flex items-center gap-1 ${isActive ? "text-yellow-300" : isCompleted ? "text-[#06555A]" : "text-purple-600"}`}>
+                                    {isActive ? "Continue →" : isCompleted ? "Review" : "Start"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Horizontal Bridge connecting Left Card to Center Rung */}
+                              <div className="w-6 sm:w-10 h-3 bg-white/95 rounded-r-none rounded-l-full shadow-sm border-t border-b border-l border-white -mr-1 z-10 shrink-0" />
+                            </div>
+                          ) : (
+                            <div className="w-full" />
+                          )}
+                        </div>
+
+                        {/* CENTER COLUMN: Rung Bar & Milestone Badge */}
+                        <div className="relative flex items-center justify-center w-24 sm:w-28 shrink-0 z-20">
+                          {/* Horizontal Rung Bar spanning across the vertical rails */}
+                          <div className="w-24 sm:w-28 h-3.5 sm:h-4 bg-white/95 backdrop-blur-md rounded-full shadow-md border border-white flex items-center justify-center z-10">
+                            {/* Milestone Badge centered right on the rung */}
+                            <div className="relative z-30">
+                              {isCompleted ? (
+                                <button
+                                  onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-[#65a30d] to-[#84cc16] text-white flex items-center justify-center shadow-[0_4px_20px_rgba(132,204,22,0.7)] border-4 border-white hover:scale-110 active:scale-95 transition-all"
+                                  title="Completed! Click to review"
+                                >
+                                  <Check className="w-6 h-6 sm:w-7 sm:h-7 stroke-[3.5]" />
+                                </button>
+                              ) : isActive ? (
+                                <div className="relative">
+                                  <button
+                                    onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#f59e0b] to-[#fbbf24] text-white flex items-center justify-center shadow-[0_0_25px_rgba(251,191,36,0.9)] border-4 border-white animate-bounce-subtle hover:scale-110 active:scale-95 transition-all"
+                                    title="Current Lesson - Click to start!"
+                                  >
+                                    <Star className="w-7 h-7 sm:w-8 sm:h-8 fill-white stroke-white stroke-[2]" />
+                                  </button>
+                                  {/* Climber Character Avatar clinging onto the ladder! */}
+                                  <div className="absolute -top-11 -right-8 sm:-right-9 w-12 sm:w-14 h-16 sm:h-18 pointer-events-none z-40">
+                                    <ClimberAvatar className="w-full h-full drop-shadow-md" />
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 backdrop-blur-md text-slate-400 flex items-center justify-center shadow-md border-4 border-white hover:scale-105 transition-all"
+                                  title="Locked - Click to start"
+                                >
+                                  <Lock className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2]" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Card or Empty */}
+                        <div className="flex items-center justify-start">
+                          {!isLeft ? (
+                            <div className="flex items-center justify-start w-full max-w-sm">
+                              {/* Horizontal Bridge connecting Center Rung to Right Card */}
+                              <div className="w-6 sm:w-10 h-3 bg-white/95 rounded-l-none rounded-r-full shadow-sm border-t border-b border-r border-white -ml-1 z-10 shrink-0" />
+
+                              {/* Floating Card */}
+                              <div
+                                onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                                className={`w-full rounded-3xl p-5 sm:p-6 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 cursor-pointer select-none z-20 ${
+                                  isActive
+                                    ? "bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#9333ea] text-white shadow-[0_20px_45px_rgba(124,58,237,0.4)] border-2 border-white/40 ring-4 ring-purple-400/20"
+                                    : isCompleted
+                                    ? "bg-white/95 backdrop-blur-2xl text-slate-900 shadow-[0_12px_32px_rgba(0,0,0,0.06)] border border-white hover:shadow-xl"
+                                    : "bg-white/80 backdrop-blur-md text-slate-800 shadow-md border border-white/70 hover:bg-white/95 hover:shadow-lg opacity-90"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-1.5">
+                                  <h3 className={`text-base sm:text-lg font-black tracking-tight ${isActive ? "text-white drop-shadow" : "text-slate-900"}`}>
+                                    {lesson.title}
+                                  </h3>
+                                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shrink-0 ${
+                                    isActive ? "bg-white/20 text-white border-white/30" : isCompleted ? "bg-lime-50 text-lime-700 border-lime-200" : "bg-slate-100 text-slate-600 border-slate-200"
+                                  }`}>
+                                    {lesson.level}
+                                  </span>
+                                </div>
+
+                                <p className={`text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3.5 ${isActive ? "text-purple-100" : "text-slate-600"}`}>
+                                  {lesson.description}
+                                </p>
+
+                                <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/10">
+                                  <div className="flex items-center gap-1.5 sm:gap-2">
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                                      <Globe className="w-3 h-3" />
+                                      {lesson.language}
+                                    </span>
+                                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg flex items-center gap-1 ${isActive ? "bg-amber-400 text-slate-950 shadow-sm" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                                      <Zap className="w-3 h-3 fill-current" />
+                                      +{lesson.xpReward} XP
+                                    </span>
+                                  </div>
+
+                                  <span className={`text-xs font-extrabold uppercase tracking-wider flex items-center gap-1 ${isActive ? "text-yellow-300" : isCompleted ? "text-[#06555A]" : "text-purple-600"}`}>
+                                    {isActive ? "Continue →" : isCompleted ? "Review" : "Start"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
+          /* GRID VIEW */
           return (
-            <div className="animate-fade-in w-full">
-              <LearningPathStairs 
-                steps={steps} 
-                onStepClick={(step) => {
-                  if (step.status !== "locked") {
-                    startLesson(step.data, listTab === "speaking" ? "speaking" : "main");
-                  }
-                }} 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+              {filtered.map((lesson, idx) => {
+                const isCompleted = completedIds.includes(lesson._id);
+                const isLocked = false;
+                const hasListening = lesson.content.some((c) => c.type === "listening");
+
+                return (
+                  <div
+                    key={lesson._id}
+                    onClick={() => startLesson(lesson, listTab === "speaking" ? "speaking" : "main")}
+                    className="glass-card-light rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 transform hover:scale-[1.025] hover:shadow-2xl border border-white cursor-pointer group relative overflow-hidden"
+                    style={{ animation: `fadeInUp 0.4s ease ${(idx * 0.05).toFixed(2)}s both` }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transition-transform group-hover:scale-110 ${
+                          isCompleted
+                            ? "bg-lime-500 text-white shadow-lime-200"
+                            : listTab === "speaking"
+                            ? "bg-emerald-500 text-white shadow-emerald-200"
+                            : "bg-[#06555A] text-white shadow-teal-200"
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-6 h-6" />
+                        ) : isLocked ? (
+                          <Lock className="w-6 h-6" />
+                        ) : listTab === "speaking" ? (
+                          <Mic className="w-6 h-6" />
+                        ) : (
+                          <BookOpen className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {hasListening && listTab !== "speaking" && (
+                          <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1 shadow-sm">
+                            <Headphones className="w-3 h-3" /> Voice
+                          </span>
+                        )}
+                        <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border shadow-sm bg-slate-100 text-slate-700 border-slate-200">
+                          {lesson.level}
+                        </span>
+                      </div>
+                    </div>
+
+                    <h3 className="font-extrabold text-slate-900 mb-1 text-lg group-hover:text-[#06555A] transition-colors">
+                      {lesson.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
+                      {lesson.description}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                          <Globe className="w-3 h-3" />
+                          {lesson.language}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                          <Zap className="w-3 h-3 text-amber-500" />
+                          +{lesson.xpReward} XP
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startLesson(lesson, listTab === "speaking" ? "speaking" : "main");
+                        }}
+                        className={`flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-md ${
+                          isCompleted
+                            ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            : listTab === "speaking"
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-[#06555A] hover:bg-[#054347] text-white"
+                        }`}
+                      >
+                        {isCompleted ? "Review" : listTab === "speaking" ? "Practise" : "Start"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
